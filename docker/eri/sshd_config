@@ -1,0 +1,7 @@
+Port 22
+PasswordAuthentication yes
+PermitRootLogin no
+MaxAuthTries 3
+ClientAliveInterval 30
+ClientAliveCountMax 6
+UsePAM yes

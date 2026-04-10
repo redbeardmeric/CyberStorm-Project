@@ -1,0 +1,19 @@
+From: ryland.grace@astrophage-project.net
+To: stratt@astrophage-project.net
+Date: Mon, 14 Nov 2022 09:12:44 +0000
+Subject: FTP access to tau-ceti relay
+
+Stratt,
+
+The spectrometer logs from the Tau Ceti observation window are ready.
+I pushed them to the relay server (tau-ceti) under your account.
+
+FTP credentials (don't share these — I'm serious):
+  user: stratt
+  pass: petrova
+
+The shadow archive is in your home directory. Cross-ref against the
+Eridani dataset and let me know if you see the same Astrophage bloom
+signature we detected at 40 Eridani last cycle.
+
+– Ryland
