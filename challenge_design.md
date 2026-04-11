@@ -96,8 +96,8 @@ Three hosts on a shared network (e.g. 10.7.7.x range):
 
 ## Still To Do
 
-- [ ] Write the full email draft content for `/var/mail/ryland`
-- [ ] Write the contents of `.astrophage_data.txt` (narrative + flag)
-- [ ] Write setup scripts for each Pi
-- [ ] Write setup scripts for Docker
-- [ ] Write student-facing challenge brief
+- [x] Write the full email draft content for `/var/mail/ryland`
+- [x] Write the contents of `.astrophage_data.txt` (narrative + flag)
+- [x] Write setup scripts for each Pi
+- [x] Write setup scripts for Docker
+- [x] Write student-facing challenge brief

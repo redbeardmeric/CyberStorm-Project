@@ -7,6 +7,15 @@ Two deployment options are covered below. Use **Docker** for classroom labs (15 
 
 # Part 1 — Docker Setup
 
+Two paths are provided depending on where Docker is running:
+
+- **Part 1A** — Docker running directly on a native Linux machine
+- **Part 1B** — Docker running inside WSL2 on a Windows machine
+
+---
+
+# Part 1A — Docker on Native Linux
+
 ## Prerequisites
 
 - Ubuntu/Debian host machine with a static LAN IP (e.g. `192.168.1.100`)
@@ -106,7 +115,7 @@ docker compose logs <container-name>
 
 ---
 
-## Step 5 — Enable IP Forwarding on the Host
+## Step 5 — Enable IP Forwarding
 
 Student machines need to route into the Docker networks through the host. Enable IP forwarding:
 
@@ -124,7 +133,7 @@ echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf
 
 ## Step 6 — Open Docker Networks to Student Traffic
 
-Find the name of the host's physical LAN interface (the one connected to the student network):
+Find the name of the physical LAN interface (the one connected to the student network):
 
 ```bash
 ip route | grep default
@@ -157,7 +166,7 @@ Each student machine needs one static route added. Give each team their team num
 sudo ip route add 10.7.<N>.0/24 via 192.168.1.100
 ```
 
-Replace `192.168.1.100` with your host machine's actual LAN IP.
+Replace `192.168.1.100` with the host machine's actual LAN IP.
 
 This route is lost on reboot. To persist it on Debian/Ubuntu, add to `/etc/network/interfaces`:
 
@@ -204,6 +213,269 @@ exit
 ## Resetting a Team Between Runs
 
 Restarting a team's containers restores them to their original image state:
+
+```bash
+docker compose restart team03-sol team03-tau team03-eri
+```
+
+Replace `03` with the team number (zero-padded to two digits).
+
+To reset all teams at once:
+
+```bash
+docker compose restart
+```
+
+---
+
+## Tearing Down Everything
+
+```bash
+docker compose down
+```
+
+---
+
+---
+
+# Part 1B — Docker on Windows via WSL2
+
+Docker runs inside WSL2, which sits behind Windows' network stack. Extra steps are needed to bridge student traffic from the physical LAN into the WSL2 Docker networks.
+
+## Prerequisites
+
+- Windows 10 (build 19041+) or Windows 11
+- WSL2 installed with an Ubuntu/Debian distribution
+- Docker Engine installed **inside WSL2** (not Docker Desktop)
+- Docker Compose v2 inside WSL2
+- Python 3 inside WSL2
+- The Windows Ethernet adapter assigned a static IP **outside** the `10.7.0.0/16` range (e.g. `192.168.1.100`) — see the warning below
+
+> **IP conflict warning:** Docker uses `10.7.1.0/24`–`10.7.15.0/24` for team networks. If Windows assigns your Ethernet adapter an IP in the `10.7.x.x` range it will conflict with the Docker bridge networks. Set a static IP on the Windows Ethernet adapter (e.g. `192.168.1.100`) before continuing. Do this in Windows Settings → Network & Internet → Ethernet → Edit IP assignment.
+
+All commands below are run inside the WSL2 terminal unless stated otherwise.
+
+---
+
+## Step 0 — Enable WSL2 Mirrored Networking
+
+By default WSL2 is NAT'd behind Windows and other machines on the LAN cannot reach it. Mirrored networking mode makes WSL2 share Windows' physical network interfaces directly.
+
+**On Windows**, create or edit `C:\Users\<your-username>\.wslconfig` and add:
+
+```ini
+[wsl2]
+networkingMode=mirrored
+```
+
+Then restart WSL2. In PowerShell (as administrator):
+
+```powershell
+wsl --shutdown
+```
+
+Reopen your WSL2 terminal. Confirm mirrored mode is active — your WSL2 IP should match the Windows Ethernet adapter IP:
+
+```bash
+ip addr show eth0
+```
+
+---
+
+## Step 1 — Get the Project Files
+
+Copy the project directory into WSL2. Confirm the structure looks like this:
+
+```
+CyberStorm Project/
+├── docker/
+│   ├── sol/
+│   │   ├── Dockerfile
+│   │   ├── sshd_config
+│   │   └── mail_ryland.txt
+│   ├── tau/
+│   │   ├── Dockerfile
+│   │   ├── vsftpd.conf
+│   │   ├── entrypoint.sh
+│   │   └── shadow
+│   └── eri/
+│       ├── Dockerfile
+│       ├── sshd_config
+│       ├── astrophage_data.txt
+│       └── astrophage_data_real.txt
+├── generate_compose.py
+└── docker-compose.yml
+```
+
+---
+
+## Step 2 — Build the Docker Images
+
+From the project root inside WSL2:
+
+```bash
+docker build -t ctf-sol ./docker/sol
+docker build -t ctf-tau ./docker/tau
+docker build -t ctf-eri ./docker/eri
+```
+
+Each build takes 30–60 seconds. Confirm all three images exist:
+
+```bash
+docker images | grep ctf-
+```
+
+Expected output:
+```
+ctf-eri    latest   ...
+ctf-tau    latest   ...
+ctf-sol    latest   ...
+```
+
+---
+
+## Step 3 — Generate the Compose File
+
+```bash
+python3 generate_compose.py
+```
+
+This writes `docker-compose.yml` with 15 isolated team networks (`10.7.1.0/24` through `10.7.15.0/24`), each containing three containers.
+
+To change the number of teams, edit `NUM_TEAMS` at the top of `generate_compose.py` and re-run.
+
+---
+
+## Step 4 — Start All Containers
+
+```bash
+docker compose up -d
+```
+
+Verify all containers are running:
+
+```bash
+docker compose ps --status running -q | wc -l
+```
+
+Should print `45`. If any containers are not running, check logs:
+
+```bash
+docker compose logs <container-name>
+```
+
+---
+
+## Step 5 — Enable IP Forwarding
+
+```bash
+sudo sysctl -w net.ipv4.ip_forward=1
+```
+
+To persist across WSL2 restarts, add to `/etc/sysctl.conf`:
+
+```bash
+echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf
+```
+
+---
+
+## Step 6 — Open Docker Networks to Student Traffic
+
+Find which interface has your LAN IP:
+
+```bash
+ip addr | grep 'inet '
+```
+
+Look for the interface with your school network IP (e.g. `192.168.1.100`). It will be named `eth0`, `eth1`, etc.
+
+Allow student traffic to reach the `10.7.0.0/16` range:
+
+```bash
+sudo iptables -I DOCKER-USER -i <interface> -d 10.7.0.0/16 -j ACCEPT
+sudo iptables -I DOCKER-USER -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+```
+
+Replace `<interface>` with your actual interface name.
+
+> **Note:** WSL2 does not persist iptables rules across restarts. Re-run these two commands each time WSL2 is restarted, or install `iptables-persistent`:
+> ```bash
+> sudo apt install iptables-persistent
+> sudo netfilter-persistent save
+> ```
+
+---
+
+## Step 7 — Allow Traffic Through Windows Firewall
+
+WSL2 mirrored mode still passes inbound traffic through the Windows Firewall. Run this in **PowerShell as administrator** on Windows:
+
+```powershell
+New-NetFirewallRule -DisplayName "CTF Docker Networks" -Direction Inbound -Action Allow -Protocol Any -RemoteAddress Any -LocalAddress 10.7.0.0/255.255.0.0
+```
+
+Verify the rule was created:
+
+```powershell
+Get-NetFirewallRule -DisplayName "CTF Docker Networks"
+```
+
+---
+
+## Step 8 — Student Machine Setup
+
+Each student machine needs one static route added. Give each team their team number `N` and the host IP (the Windows machine's LAN IP).
+
+```bash
+sudo ip route add 10.7.<N>.0/24 via 192.168.1.100
+```
+
+Replace `192.168.1.100` with the Windows machine's actual LAN IP.
+
+This route is lost on reboot. To persist it on Debian/Ubuntu, add to `/etc/network/interfaces`:
+
+```
+up ip route add 10.7.<N>.0/24 via 192.168.1.100
+```
+
+After adding the route, students can reach their containers:
+
+```
+sol       →  10.7.<N>.1   (SSH :22)
+tau-ceti  →  10.7.<N>.2   (FTP :21)
+eridani   →  10.7.<N>.3   (SSH :22)
+```
+
+---
+
+## Step 9 — Verify End-to-End
+
+Run this quick check from a student machine (substituting `N`):
+
+```bash
+# Host discovery
+nmap -sV 10.7.N.0/24
+
+# sol SSH
+ssh ryland@10.7.N.1           # password: microbiology
+cat /var/mail/ryland
+exit
+
+# tau-ceti FTP
+ftp 10.7.N.2                  # user: stratt / password: petrova
+ls
+bye
+
+# eridani SSH
+ssh rocky@10.7.N.3            # password: adrian
+ls -a ~
+exit
+```
+
+---
+
+## Resetting a Team Between Runs
 
 ```bash
 docker compose restart team03-sol team03-tau team03-eri
