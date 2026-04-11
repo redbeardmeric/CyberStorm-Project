@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
-"""Generate docker-compose.yml for 15 isolated CTF team networks.
+"""Generate docker-compose.yml for isolated CTF team networks.
 
-Each team gets subnet 10.7.{n}.0/24 with:
-  sol      10.7.{n}.1  (SSH :22)
-  tau-ceti 10.7.{n}.2  (FTP :21)
-  eridani  10.7.{n}.3  (SSH :22, MaxAuthTries 3)
+Each team gets subnet {BASE}.{n}.0/24 with:
+  sol      {BASE}.{n}.1  (SSH :22)
+  tau-ceti {BASE}.{n}.2  (FTP :21)
+  eridani  {BASE}.{n}.3  (SSH :22, MaxAuthTries 3)
 
-Students reach containers directly via a static route on their machine:
-  sudo ip route add 10.7.<N>.0/24 via <host-ip>
+Students reach containers via a static route on their machine:
+  sudo ip route add {BASE}.<N>.0/24 via <host-ip>
+
+IMPORTANT: SUBNET_BASE must not overlap with the physical LAN.
+  e.g. if the LAN uses 10.7.x.x, do not use "10.7" here.
 """
 
 NUM_TEAMS = 15
+
+# Change this if the default subnet conflicts with your physical LAN.
+# Must be the first two octets of a private range not used on the LAN.
+# Examples: "10.20", "10.100", "172.20"
+SUBNET_BASE = "10.20"
 
 SERVICE_BLOCK = """\
   team{n:02d}-sol:
@@ -18,21 +26,21 @@ SERVICE_BLOCK = """\
     hostname: sol
     networks:
       team{n:02d}-net:
-        ipv4_address: 10.7.{n}.1
+        ipv4_address: {base}.{n}.1
 
   team{n:02d}-tau:
     image: ctf-tau
     hostname: tau-ceti
     networks:
       team{n:02d}-net:
-        ipv4_address: 10.7.{n}.2
+        ipv4_address: {base}.{n}.2
 
   team{n:02d}-eri:
     image: ctf-eri
     hostname: eridani
     networks:
       team{n:02d}-net:
-        ipv4_address: 10.7.{n}.3
+        ipv4_address: {base}.{n}.3
 
 """
 
@@ -41,8 +49,8 @@ NETWORK_BLOCK = """\
     driver: bridge
     ipam:
       config:
-        - subnet: 10.7.{n}.0/24
-          gateway: 10.7.{n}.254
+        - subnet: {base}.{n}.0/24
+          gateway: {base}.{n}.254
 """
 
 
@@ -50,11 +58,11 @@ def main():
     lines = ["services:\n"]
 
     for n in range(1, NUM_TEAMS + 1):
-        lines.append(SERVICE_BLOCK.format(n=n))
+        lines.append(SERVICE_BLOCK.format(n=n, base=SUBNET_BASE))
 
     lines.append("networks:\n")
     for n in range(1, NUM_TEAMS + 1):
-        lines.append(NETWORK_BLOCK.format(n=n))
+        lines.append(NETWORK_BLOCK.format(n=n, base=SUBNET_BASE))
 
     output = "".join(lines)
 
@@ -63,7 +71,7 @@ def main():
 
     print(f"Generated docker-compose.yml")
     print(f"  {NUM_TEAMS} teams, {NUM_TEAMS * 3} containers, {NUM_TEAMS} networks")
-    print(f"  Networks: 10.7.1.0/24 through 10.7.{NUM_TEAMS}.0/24")
+    print(f"  Networks: {SUBNET_BASE}.1.0/24 through {SUBNET_BASE}.{NUM_TEAMS}.0/24")
 
 
 if __name__ == "__main__":

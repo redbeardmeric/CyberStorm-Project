@@ -89,9 +89,11 @@ ctf-sol    latest   ...
 python3 generate_compose.py
 ```
 
-This writes `docker-compose.yml` with 15 isolated team networks (`10.7.1.0/24` through `10.7.15.0/24`), each containing three containers. The gateway for each network is set to `.254` so containers can use `.1`, `.2`, and `.3`.
+This writes `docker-compose.yml` with 15 isolated team networks (`10.20.1.0/24` through `10.20.15.0/24`), each containing three containers. The gateway for each network is set to `.254` so containers can use `.1`, `.2`, and `.3`.
 
-To change the number of teams, edit `NUM_TEAMS` at the top of `generate_compose.py` and re-run.
+> **Subnet conflict warning:** The default subnet base is `10.20`. If your physical LAN already uses `10.20.x.x`, edit `SUBNET_BASE` at the top of `generate_compose.py` to a range not in use on the LAN (e.g. `10.100` or `172.20`), then re-run. The Docker subnet range must never overlap with the physical LAN or students will be unable to reach the containers.
+
+To change the number of teams or subnet base, edit `NUM_TEAMS` / `SUBNET_BASE` at the top of `generate_compose.py` and re-run.
 
 ---
 
@@ -141,14 +143,14 @@ ip route | grep default
 
 The interface name appears after `dev` (e.g. `eth0`, `ens3`, `enp2s0`).
 
-Allow student traffic to reach the `10.7.0.0/16` range:
+Allow student traffic to reach the Docker subnet range:
 
 ```bash
-sudo iptables -I DOCKER-USER -i <interface> -d 10.7.0.0/16 -j ACCEPT
+sudo iptables -I DOCKER-USER -i <interface> -d 10.20.0.0/16 -j ACCEPT
 sudo iptables -I DOCKER-USER -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 ```
 
-Replace `<interface>` with your actual interface name.
+Replace `<interface>` with your actual interface name. If you changed `SUBNET_BASE`, update the `-d` address to match (e.g. `-d 10.100.0.0/16`).
 
 > **Note:** These iptables rules are lost on reboot. To persist them, install `iptables-persistent`:
 > ```bash
@@ -163,23 +165,23 @@ Replace `<interface>` with your actual interface name.
 Each student machine needs one static route added. Give each team their team number `N` and the host IP.
 
 ```bash
-sudo ip route add 10.7.<N>.0/24 via 192.168.1.100
+sudo ip route add 10.20.<N>.0/24 via 192.168.1.100
 ```
 
-Replace `192.168.1.100` with the host machine's actual LAN IP.
+Replace `192.168.1.100` with the host machine's actual LAN IP. If you changed `SUBNET_BASE`, replace `10.20` accordingly.
 
 This route is lost on reboot. To persist it on Debian/Ubuntu, add to `/etc/network/interfaces`:
 
 ```
-up ip route add 10.7.<N>.0/24 via 192.168.1.100
+up ip route add 10.20.<N>.0/24 via 192.168.1.100
 ```
 
 After adding the route, students can reach their containers:
 
 ```
-sol       →  10.7.<N>.1   (SSH :22)
-tau-ceti  →  10.7.<N>.2   (FTP :21)
-eridani   →  10.7.<N>.3   (SSH :22)
+sol       →  10.20.<N>.1   (SSH :22)
+tau-ceti  →  10.20.<N>.2   (FTP :21)
+eridani   →  10.20.<N>.3   (SSH :22)
 ```
 
 ---
@@ -190,20 +192,20 @@ Run this quick check from a student machine (substituting `N`):
 
 ```bash
 # Host discovery
-nmap -sV 10.7.N.0/24
+nmap -sV 10.20.N.0/24
 
 # sol SSH
-ssh ryland@10.7.N.1           # password: microbiology
+ssh ryland@10.20.N.1           # password: microbiology
 cat /var/mail/ryland
 exit
 
 # tau-ceti FTP
-ftp 10.7.N.2                  # user: stratt / password: petrova
+ftp 10.20.N.2                  # user: stratt / password: petrova
 ls
 bye
 
 # eridani SSH
-ssh rocky@10.7.N.3            # password: adrian
+ssh rocky@10.20.N.3            # password: adrian
 ls -a ~
 exit
 ```
@@ -249,9 +251,9 @@ Docker runs inside WSL2, which sits behind Windows' network stack. Extra steps a
 - Docker Engine installed **inside WSL2** (not Docker Desktop)
 - Docker Compose v2 inside WSL2
 - Python 3 inside WSL2
-- The Windows Ethernet adapter assigned a static IP **outside** the `10.7.0.0/16` range (e.g. `192.168.1.100`) — see the warning below
+- The Windows Ethernet adapter assigned a static IP **outside** the Docker subnet range — see the warning below
 
-> **IP conflict warning:** Docker uses `10.7.1.0/24`–`10.7.15.0/24` for team networks. If Windows assigns your Ethernet adapter an IP in the `10.7.x.x` range it will conflict with the Docker bridge networks. Set a static IP on the Windows Ethernet adapter (e.g. `192.168.1.100`) before continuing. Do this in Windows Settings → Network & Internet → Ethernet → Edit IP assignment.
+> **IP conflict warning:** Docker uses `10.20.1.0/24`–`10.20.15.0/24` for team networks by default. If Windows assigns your Ethernet adapter any IP in that range it will conflict with the Docker bridge networks. Set a static IP on the Windows Ethernet adapter that is outside the Docker range (e.g. `192.168.1.100`) before continuing. Do this in Windows Settings → Network & Internet → Ethernet → Edit IP assignment. If your LAN already uses `10.20.x.x`, change `SUBNET_BASE` in `generate_compose.py` before generating the compose file.
 
 All commands below are run inside the WSL2 terminal unless stated otherwise.
 
@@ -340,9 +342,9 @@ ctf-sol    latest   ...
 python3 generate_compose.py
 ```
 
-This writes `docker-compose.yml` with 15 isolated team networks (`10.7.1.0/24` through `10.7.15.0/24`), each containing three containers.
+This writes `docker-compose.yml` with 15 isolated team networks (`10.20.1.0/24` through `10.20.15.0/24`), each containing three containers.
 
-To change the number of teams, edit `NUM_TEAMS` at the top of `generate_compose.py` and re-run.
+To change the number of teams or subnet base, edit `NUM_TEAMS` / `SUBNET_BASE` at the top of `generate_compose.py` and re-run.
 
 ---
 
@@ -390,14 +392,14 @@ ip addr | grep 'inet '
 
 Look for the interface with your school network IP (e.g. `192.168.1.100`). It will be named `eth0`, `eth1`, etc.
 
-Allow student traffic to reach the `10.7.0.0/16` range:
+Allow student traffic to reach the Docker subnet range:
 
 ```bash
-sudo iptables -I DOCKER-USER -i <interface> -d 10.7.0.0/16 -j ACCEPT
+sudo iptables -I DOCKER-USER -i <interface> -d 10.20.0.0/16 -j ACCEPT
 sudo iptables -I DOCKER-USER -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 ```
 
-Replace `<interface>` with your actual interface name.
+Replace `<interface>` with your actual interface name. If you changed `SUBNET_BASE`, update the `-d` address to match.
 
 > **Note:** WSL2 does not persist iptables rules across restarts. Re-run these two commands each time WSL2 is restarted, or install `iptables-persistent`:
 > ```bash
@@ -412,7 +414,7 @@ Replace `<interface>` with your actual interface name.
 WSL2 mirrored mode still passes inbound traffic through the Windows Firewall. Run this in **PowerShell as administrator** on Windows:
 
 ```powershell
-New-NetFirewallRule -DisplayName "CTF Docker Networks" -Direction Inbound -Action Allow -Protocol Any -RemoteAddress Any -LocalAddress 10.7.0.0/255.255.0.0
+New-NetFirewallRule -DisplayName "CTF Docker Networks" -Direction Inbound -Action Allow -Protocol Any -RemoteAddress Any -LocalAddress 10.20.0.0/255.255.0.0
 ```
 
 Verify the rule was created:
@@ -428,23 +430,23 @@ Get-NetFirewallRule -DisplayName "CTF Docker Networks"
 Each student machine needs one static route added. Give each team their team number `N` and the host IP (the Windows machine's LAN IP).
 
 ```bash
-sudo ip route add 10.7.<N>.0/24 via 192.168.1.100
+sudo ip route add 10.20.<N>.0/24 via 192.168.1.100
 ```
 
-Replace `192.168.1.100` with the Windows machine's actual LAN IP.
+Replace `192.168.1.100` with the Windows machine's actual LAN IP. If you changed `SUBNET_BASE`, replace `10.20` accordingly.
 
 This route is lost on reboot. To persist it on Debian/Ubuntu, add to `/etc/network/interfaces`:
 
 ```
-up ip route add 10.7.<N>.0/24 via 192.168.1.100
+up ip route add 10.20.<N>.0/24 via 192.168.1.100
 ```
 
 After adding the route, students can reach their containers:
 
 ```
-sol       →  10.7.<N>.1   (SSH :22)
-tau-ceti  →  10.7.<N>.2   (FTP :21)
-eridani   →  10.7.<N>.3   (SSH :22)
+sol       →  10.20.<N>.1   (SSH :22)
+tau-ceti  →  10.20.<N>.2   (FTP :21)
+eridani   →  10.20.<N>.3   (SSH :22)
 ```
 
 ---
@@ -455,20 +457,20 @@ Run this quick check from a student machine (substituting `N`):
 
 ```bash
 # Host discovery
-nmap -sV 10.7.N.0/24
+nmap -sV 10.20.N.0/24
 
 # sol SSH
-ssh ryland@10.7.N.1           # password: microbiology
+ssh ryland@10.20.N.1           # password: microbiology
 cat /var/mail/ryland
 exit
 
 # tau-ceti FTP
-ftp 10.7.N.2                  # user: stratt / password: petrova
+ftp 10.20.N.2                  # user: stratt / password: petrova
 ls
 bye
 
 # eridani SSH
-ssh rocky@10.7.N.3            # password: adrian
+ssh rocky@10.20.N.3            # password: adrian
 ls -a ~
 exit
 ```
