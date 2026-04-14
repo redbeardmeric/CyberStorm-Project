@@ -11,14 +11,16 @@ Students reach containers via a static route on their machine:
 
 IMPORTANT: SUBNET_BASE must not overlap with the physical LAN.
   e.g. if the LAN uses 10.7.x.x, do not use "10.7" here.
+  The default "10.7" assumes the classroom LAN uses a different range (e.g. 192.168.x.x).
+  Change SUBNET_BASE if there is any overlap.
 """
 
-NUM_TEAMS = 15
+NUM_TEAMS = 1
 
 # Change this if the default subnet conflicts with your physical LAN.
 # Must be the first two octets of a private range not used on the LAN.
 # Examples: "10.20", "10.100", "172.20"
-SUBNET_BASE = "10.20"
+SUBNET_BASE = "10.7"
 
 SERVICE_BLOCK = """\
   team{n:02d}-sol:
