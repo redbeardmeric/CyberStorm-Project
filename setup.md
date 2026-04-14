@@ -146,8 +146,10 @@ The interface name appears after `dev` (e.g. `eth0`, `ens3`, `enp2s0`).
 Allow student traffic to reach the Docker subnet range:
 
 ```bash
-sudo iptables -I DOCKER-USER -i <interface> -d 10.7.0.0/16 -j ACCEPT
+sudo iptables -I DOCKER-USER -i <interface> -o <bridge> -d 10.7.0.0/16 -j ACCEPT
+sudo iptables -I DOCKER-USER -i <bridge> -o <interface> -d 10.7.0.0/16 -j ACCEPT
 sudo iptables -I DOCKER-USER -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+sudo iptables -t nat -I POSTROUTING -s 10.7.0.0/16 -d 10.7.0.0/16 ! -o <bridge> -j ACCEPT
 ```
 
 Replace `<interface>` with your actual interface name. If you changed `SUBNET_BASE`, update the `-d` address to match (e.g. `-d 10.100.0.0/16`).
@@ -157,6 +159,26 @@ Replace `<interface>` with your actual interface name. If you changed `SUBNET_BA
 > sudo apt install iptables-persistent
 > sudo netfilter-persistent save
 > ```
+
+Find the handle number of Docker's drop rule:
+```bash
+sudo nft -a list chain ip raw PREROUTING
+```
+
+Look for the line:
+```
+iifname != "br-2efde1515264" ip daddr 10.7.1.x ... drop   # handle <N>
+```
+
+Insert an accept rule **before** Docker's drop rule using that handle number:
+```bash
+sudo nft insert rule ip raw PREROUTING position <N> ip saddr 10.7.7.0/24 ip daddr 10.7.0.0/16 accept
+```
+
+Verify the accept rule appears before the drop rule:
+```bash
+sudo nft list chain ip raw PREROUTING
+```
 
 ---
 
