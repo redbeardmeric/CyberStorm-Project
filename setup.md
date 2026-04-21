@@ -217,7 +217,7 @@ Run this quick check from a student machine (substituting `N`):
 nmap -sV 10.7.N.0/24
 
 # sol SSH
-ssh ryland@10.7.N.1            # password: microbiology
+ssh ryland@10.7.N.1            # password: astrophage
 cat /var/mail/ryland
 exit
 
@@ -482,7 +482,7 @@ Run this quick check from a student machine (substituting `N`):
 nmap -sV 10.7.N.0/24
 
 # sol SSH
-ssh ryland@10.7.N.1            # password: microbiology
+ssh ryland@10.7.N.1            # password: astrophage
 cat /var/mail/ryland
 exit
 
@@ -632,7 +632,7 @@ Each script installs the required service, creates the challenge user, and place
 
 **sol:**
 ```bash
-ssh ryland@10.7.7.1        # password: microbiology
+ssh ryland@10.7.7.1        # password: astrophage
 cat /var/mail/ryland
 exit
 ```

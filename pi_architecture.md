@@ -77,7 +77,7 @@ flowchart LR
 ### `sol` (10.7.7.1) — Pi 1
 - **OS:** Raspberry Pi OS Lite
 - **Services:** OpenSSH (`openssh-server`)
-- **Users:** `ryland` (password: `microbiology`)
+- **Users:** `ryland` (password: `astrophage`)
 - **Key files:** `/var/mail/ryland` — narrative email draft exposing `stratt:petrova`
 - **SSH config** (`/etc/ssh/sshd_config`):
   - `ClientAliveInterval 30`

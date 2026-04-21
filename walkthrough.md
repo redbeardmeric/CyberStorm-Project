@@ -43,10 +43,10 @@ hydra -l ryland -P /usr/share/wordlists/rockyou.txt ssh://10.7.N.1
 
 **Expected output:**
 ```
-[22][ssh] host: 10.7.N.1   login: ryland   password: microbiology
+[22][ssh] host: 10.7.N.1   login: ryland   password: astrophage
 ```
 
-**Credentials found:** `ryland:microbiology`
+**Credentials found:** `ryland:astrophage`
 
 > **Note:** This will take several minutes. The password appears around line 169,000 of rockyou.txt.
 
@@ -225,16 +225,20 @@ signature at 25.984 THz. Bloom density estimated 2.4x Tau Ceti reference levels.
 
 This system is further along than we thought. Rocky's numbers don't lie.
 
->> FLAG{astrophage_confirmed_tau_ceti_e} <<
+>> FLAG{astrophage_confirmed_tau_ceti_e_tNN} <<
 ```
+
+Where `NN` is your assigned team number (e.g. `t01`, `t02`).
 
 ---
 
 ## Flag
 
 ```
-FLAG{astrophage_confirmed_tau_ceti_e}
+FLAG{astrophage_confirmed_tau_ceti_e_tNN}
 ```
+
+Replace `NN` with your team number.
 
 ---
 
@@ -275,6 +279,6 @@ cat .astrophage_data.txt
 
 | Host       | IP          | Service | Username  | Password       | How Obtained          |
 |------------|-------------|---------|-----------|----------------|----------------------|
-| `sol`      | 10.7.N.1    | SSH     | `ryland`  | `microbiology` | hydra + rockyou.txt  |
+| `sol`      | 10.7.N.1    | SSH     | `ryland`  | `astrophage`   | hydra + rockyou.txt  |
 | `tau-ceti` | 10.7.N.2    | FTP     | `stratt`  | `petrova`      | email on sol         |
 | `eridani`  | 10.7.N.3    | SSH     | `rocky`   | `adrian`       | hashcat on shadow    |

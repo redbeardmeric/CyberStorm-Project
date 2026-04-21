@@ -40,6 +40,8 @@ SERVICE_BLOCK = """\
   team{n:02d}-eri:
     image: ctf-eri
     hostname: eridani
+    environment:
+      TEAM_NUM: "{n:02d}"
     networks:
       team{n:02d}-net:
         ipv4_address: {base}.{n}.3
@@ -49,6 +51,9 @@ SERVICE_BLOCK = """\
 NETWORK_BLOCK = """\
   team{n:02d}-net:
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-team{n:02d}
+      com.docker.network.bridge.icc: "true"
     ipam:
       config:
         - subnet: {base}.{n}.0/24

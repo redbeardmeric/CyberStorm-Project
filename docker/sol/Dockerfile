@@ -3,7 +3,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y openssh-server && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash ryland && \
-    echo 'ryland:microbiology' | chpasswd
+    echo 'ryland:astrophage' | chpasswd
 
 RUN mkdir -p /var/mail /run/sshd
 

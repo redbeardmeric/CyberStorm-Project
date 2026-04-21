@@ -61,7 +61,7 @@ Each team gets three containers on an isolated `/24` subnet: `10.7.{n}.0/24`
 ### `sol` (10.7.{n}.1)
 - **Base image:** `debian:bookworm-slim`
 - **Services:** OpenSSH
-- **Users:** `ryland` (password: `microbiology`)
+- **Users:** `ryland` (password: `astrophage`)
 - **Key files:** `/var/mail/ryland` — narrative email draft exposing `stratt:petrova`
 - **SSH config:** `ClientAliveInterval 30`, `ClientAliveCountMax 6`
 

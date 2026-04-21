@@ -21,7 +21,7 @@ Three hosts on a shared network (e.g. 10.7.7.x range):
 
 | Hostname   | IP          | Service        | User     | Password    |
 |------------|-------------|----------------|----------|-------------|
-| `sol`      | 10.7.7.1    | SSH            | `ryland` | `microbiology` |
+| `sol`      | 10.7.7.1    | SSH            | `ryland` | `astrophage` |
 | `tau-ceti` | 10.7.7.2    | FTP            | `stratt` | `petrova`   |
 | `eridani`  | 10.7.7.3    | SSH (rate-limited) | `rocky` | `adrian` |
 
@@ -36,7 +36,7 @@ Three hosts on a shared network (e.g. 10.7.7.x range):
 ### Step 2 — Credential Attack on `sol`
 - Tool: `hydra`
 - Brute-force SSH login for user `ryland` on `sol` using rockyou.txt
-- Password: `microbiology`
+- Password: `astrophage`
 
 ### Step 3 — Intelligence Gathering on `sol`
 - Location: `/var/mail/ryland`

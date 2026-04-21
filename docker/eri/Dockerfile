@@ -8,12 +8,13 @@ RUN useradd -m -s /bin/bash rocky && \
 RUN mkdir -p /run/sshd
 
 COPY astrophage_data.txt /home/rocky/astrophage_data.txt
-COPY astrophage_data_real.txt /home/rocky/.astrophage_data.txt
-RUN chown rocky:rocky /home/rocky/astrophage_data.txt /home/rocky/.astrophage_data.txt && \
-    chmod 640 /home/rocky/astrophage_data.txt /home/rocky/.astrophage_data.txt
+RUN chown rocky:rocky /home/rocky/astrophage_data.txt && \
+    chmod 640 /home/rocky/astrophage_data.txt
 
 COPY sshd_config /etc/ssh/sshd_config
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 22
 
-CMD ["/usr/sbin/sshd", "-D"]
+CMD ["/entrypoint.sh"]

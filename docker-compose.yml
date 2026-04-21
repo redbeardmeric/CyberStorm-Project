@@ -16,6 +16,8 @@ services:
   team01-eri:
     image: ctf-eri
     hostname: eridani
+    environment:
+      TEAM_NUM: "01"
     networks:
       team01-net:
         ipv4_address: 10.7.1.3
@@ -23,6 +25,9 @@ services:
 networks:
   team01-net:
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-team01
+      com.docker.network.bridge.icc: "true"
     ipam:
       config:
         - subnet: 10.7.1.0/24

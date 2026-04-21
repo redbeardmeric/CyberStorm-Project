@@ -15,13 +15,19 @@ Classified astrophage research is locked across three remote systems named after
 
 ## Your Network
 
+
 Each team has an isolated subnet. Your instructor will give you your team number `N`.
+
+Run this command to get access to your network:
+``` bash
+sudo ip route add 10.7.<N>.0/24 via <HOST IP>
+```
 
 | Hostname   | IP          | Service |
 |------------|-------------|---------|
-| `sol`      | `10.7.N.1`  | Unknown |
-| `tau-ceti` | `10.7.N.2`  | Unknown |
-| `eridani`  | `10.7.N.3`  | Unknown |
+| `sol`      |   Unknown   | Unknown |
+| `tau-ceti` |   Unknown   | Unknown |
+| `eridani`  |   Unknown   | Unknown |
 
 > Replace `N` with your assigned team number throughout (e.g. team 3 uses `10.7.3.x`).
 
@@ -52,21 +58,5 @@ A copy of `rockyou.txt` is available at `/usr/share/wordlists/rockyou.txt`.
 - There is one flag. It is a text string in the format `FLAG{...}`
 
 ---
-
-## Hints
-
-Hints are available from your instructor. Each hint costs points — use them as a last resort.
-
-| Hint # | Costs |
-|--------|-------|
-| 1      | 10 pts |
-| 2      | 20 pts |
-| 3      | 30 pts |
-
----
-
-## Submission
-
-Submit the flag text (`FLAG{...}`) on the course portal under **CyberStorm > Lost Signal > Flag Submission**.
 
 Good luck.
