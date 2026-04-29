@@ -9,7 +9,7 @@ apt-get install -y openssh-server
 
 echo "[eridani] Creating user rocky..."
 id rocky &>/dev/null || useradd -m -s /bin/bash rocky
-echo 'rocky:adrian' | chpasswd
+echo 'rocky:bluemoon' | chpasswd
 
 echo "[eridani] Writing challenge files..."
 cat > /home/rocky/astrophage_data.txt << 'EOF'

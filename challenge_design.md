@@ -21,9 +21,9 @@ Three hosts on a shared network (e.g. 10.7.7.x range):
 
 | Hostname   | IP          | Service        | User     | Password    |
 |------------|-------------|----------------|----------|-------------|
-| `sol`      | 10.7.7.1    | SSH            | `ryland` | `astrophage` |
+| `sol`      | 10.7.7.1    | SSH            | `ryland` | `hellokitty` |
 | `tau-ceti` | 10.7.7.2    | FTP            | `stratt` | `petrova`   |
-| `eridani`  | 10.7.7.3    | SSH (rate-limited) | `rocky` | `adrian` |
+| `eridani`  | 10.7.7.3    | SSH (rate-limited) | `rocky` | `bluemoon` |
 
 ---
 
@@ -36,7 +36,7 @@ Three hosts on a shared network (e.g. 10.7.7.x range):
 ### Step 2 — Credential Attack on `sol`
 - Tool: `hydra`
 - Brute-force SSH login for user `ryland` on `sol` using rockyou.txt
-- Password: `astrophage`
+- Password: `hellokitty`
 
 ### Step 3 — Intelligence Gathering on `sol`
 - Location: `/var/mail/ryland`
@@ -51,11 +51,11 @@ Three hosts on a shared network (e.g. 10.7.7.x range):
 ### Step 5 — Offline Password Cracking
 - Tool: `hashcat`
 - Hash type: MD5crypt (`$1$`)
-- Crack `rocky`'s hash → `adrian`
+- Crack `rocky`'s hash → `bluemoon`
 
 ### Step 6 — SSH into `eridani`
 - Tool: `ssh`
-- Login as `rocky` with password `adrian`
+- Login as `rocky` with password `bluemoon`
 - Note: SSH is rate-limited — brute-force is not viable, cracking the hash first is required
 
 ### Step 7 — Finding the Flag

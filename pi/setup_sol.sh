@@ -9,7 +9,7 @@ apt-get install -y openssh-server
 
 echo "[sol] Creating user ryland..."
 id ryland &>/dev/null || useradd -m -s /bin/bash ryland
-echo 'ryland:astrophage' | chpasswd
+echo 'ryland:hellokitty' | chpasswd
 
 echo "[sol] Writing mail file..."
 mkdir -p /var/mail

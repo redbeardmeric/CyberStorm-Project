@@ -30,9 +30,9 @@ graph TD
         E3[~/.astrophage_data.txt\nFLAG]
     end
 
-    A -->|ssh ryland:astrophage| SOL
+    A -->|ssh ryland:hellokitty| SOL
     A -->|ftp stratt:petrova| TAU
-    A -->|ssh rocky:adrian| ERI
+    A -->|ssh rocky:bluemoon| ERI
 
     SOL -->|credentials in mail| TAU
     TAU -->|shadow file download| A
@@ -49,8 +49,8 @@ flowchart LR
     B --> C[hydra\nbrute-force sol SSH\nrockyou.txt]
     C --> D[ssh into sol\nread /var/mail/ryland]
     D --> E[ftp into tau-ceti\ndownload shadow file]
-    E --> F[hashcat\ncrack MD5crypt hash\n→ adrian]
-    F --> G[ssh into eridani\nrocky:adrian]
+    E --> F[hashcat\ncrack MD5crypt hash\n→ bluemoon]
+    F --> G[ssh into eridani\nrocky:bluemoon]
     G --> H[ls → decoy\nastrophage_data.txt]
     H --> I[ls -a or find\n→ .astrophage_data.txt]
     I --> J([FLAG])
@@ -77,7 +77,7 @@ flowchart LR
 ### `sol` (10.7.7.1) — Pi 1
 - **OS:** Raspberry Pi OS Lite
 - **Services:** OpenSSH (`openssh-server`)
-- **Users:** `ryland` (password: `astrophage`)
+- **Users:** `ryland` (password: `hellokitty`)
 - **Key files:** `/var/mail/ryland` — narrative email draft exposing `stratt:petrova`
 - **SSH config** (`/etc/ssh/sshd_config`):
   - `ClientAliveInterval 30`
@@ -94,7 +94,7 @@ flowchart LR
 ### `eridani` (10.7.7.3) — Pi 3
 - **OS:** Raspberry Pi OS Lite
 - **Services:** OpenSSH (`openssh-server`)
-- **Users:** `rocky` (password: `adrian`)
+- **Users:** `rocky` (password: `bluemoon`)
 - **Key files:**
   - `~/astrophage_data.txt` — decoy, contents: *"Nice try. Look closer."*
   - `~/.astrophage_data.txt` — real flag

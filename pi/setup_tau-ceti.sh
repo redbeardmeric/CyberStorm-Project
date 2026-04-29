@@ -13,7 +13,7 @@ echo 'stratt:petrova' | chpasswd
 
 echo "[tau-ceti] Writing shadow file..."
 cat > /home/stratt/shadow << 'EOF'
-rocky:$1$hailmary$3Q.jtfyjzx8FjZ5UGLFY3/:19000:0:99999:7:::
+rocky:$1$hailmary$ahx9IaEq7304SRR3akXGK.:19000:0:99999:7:::
 EOF
 chown stratt:stratt /home/stratt/shadow
 chmod 644 /home/stratt/shadow

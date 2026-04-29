@@ -39,8 +39,8 @@ flowchart LR
     B --> C[hydra\nbrute-force sol SSH\nrockyou.txt]
     C --> D[ssh into sol\nread /var/mail/ryland]
     D --> E[ftp into tau-ceti\ndownload shadow file]
-    E --> F[hashcat\ncrack MD5crypt hash\n→ adrian]
-    F --> G[ssh into eridani\nrocky:adrian]
+    E --> F[hashcat\ncrack MD5crypt hash\n→ bluemoon]
+    F --> G[ssh into eridani\nrocky:bluemoon]
     G --> H[ls → decoy\nastrophage_data.txt]
     H --> I[ls -a or find\n→ .astrophage_data.txt]
     I --> J([FLAG])
@@ -61,7 +61,7 @@ Each team gets three containers on an isolated `/24` subnet: `10.7.{n}.0/24`
 ### `sol` (10.7.{n}.1)
 - **Base image:** `debian:bookworm-slim`
 - **Services:** OpenSSH
-- **Users:** `ryland` (password: `astrophage`)
+- **Users:** `ryland` (password: `hellokitty`)
 - **Key files:** `/var/mail/ryland` — narrative email draft exposing `stratt:petrova`
 - **SSH config:** `ClientAliveInterval 30`, `ClientAliveCountMax 6`
 
@@ -75,7 +75,7 @@ Each team gets three containers on an isolated `/24` subnet: `10.7.{n}.0/24`
 ### `eridani` (10.7.{n}.3)
 - **Base image:** `debian:bookworm-slim`
 - **Services:** OpenSSH
-- **Users:** `rocky` (password: `adrian`)
+- **Users:** `rocky` (password: `bluemoon`)
 - **Key files:**
   - `~/astrophage_data.txt` — decoy, contents: *"Nice try. Look closer."*
   - `~/.astrophage_data.txt` — real flag
