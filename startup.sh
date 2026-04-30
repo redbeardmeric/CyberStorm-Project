@@ -50,13 +50,30 @@ sed -i "s/^NUM_TEAMS = .*/NUM_TEAMS = $NUM_TEAMS/" generate_compose.py
 ok "generate_compose.py updated"
 
 # ===========================================================================
-# Step 2 — build Docker images
+# Step 2 — ensure Docker images exist
 # ===========================================================================
-info "Step 2/7 — Building Docker images (this takes 1–3 min)..."
-docker build -t ctf-sol ./docker/sol
-docker build -t ctf-tau ./docker/tau
-docker build -t ctf-eri ./docker/eri
-ok "Images built: ctf-sol  ctf-tau  ctf-eri"
+IMAGES=(ctf-sol ctf-tau ctf-eri)
+IMAGES_MISSING=()
+for img in "${IMAGES[@]}"; do
+    docker image inspect "$img" &>/dev/null || IMAGES_MISSING+=("$img")
+done
+
+if [[ ${#IMAGES_MISSING[@]} -eq 0 ]]; then
+    ok "Step 2/7 — Images already loaded: ${IMAGES[*]}"
+elif [[ -f "$SCRIPT_DIR/images.tar.gz" ]]; then
+    info "Step 2/7 — Loading images from images.tar.gz..."
+    docker load < "$SCRIPT_DIR/images.tar.gz"
+    ok "Images loaded from images.tar.gz"
+else
+    info "Step 2/7 — Building Docker images (this takes 1–3 min)..."
+    docker build -t ctf-sol ./docker/sol
+    docker build -t ctf-tau ./docker/tau
+    docker build -t ctf-eri ./docker/eri
+    ok "Images built: ctf-sol  ctf-tau  ctf-eri"
+    info "Saving images to images.tar.gz for faster future startups..."
+    docker save "${IMAGES[@]}" | gzip > "$SCRIPT_DIR/images.tar.gz"
+    ok "Saved to images.tar.gz ($(du -sh "$SCRIPT_DIR/images.tar.gz" | cut -f1))"
+fi
 
 # ===========================================================================
 # Step 3 — generate docker-compose.yml
@@ -83,6 +100,27 @@ fi
 ok "$RUNNING / $EXPECTED containers running"
 
 # ===========================================================================
+# Step 4b — nft raw PREROUTING accept (Docker drop-rule workaround)
+# ===========================================================================
+# Docker (nftables backend) inserts per-container drop rules into ip raw PREROUTING:
+#   iifname != "br-teamXX" ip daddr <container-ip> drop
+# These fire before iptables and silently discard routed student traffic arriving
+# on the LAN interface. Insert a broad accept for the whole team subnet FIRST so
+# it wins before those drops.
+if sudo nft list chain ip raw PREROUTING 2>/dev/null | grep -q "drop"; then
+    # Remove any stale accept rules we may have added in a previous run
+    while sudo nft list chain ip raw PREROUTING 2>/dev/null \
+          | grep -q "ip daddr $SUBNET_CIDR accept"; do
+        HANDLE=$(sudo nft -a list chain ip raw PREROUTING 2>/dev/null \
+                  | grep -F "ip daddr $SUBNET_CIDR accept" \
+                  | grep -o 'handle [0-9]*' | awk '{print $2}' | head -1)
+        [[ -n "$HANDLE" ]] && sudo nft delete rule ip raw PREROUTING handle "$HANDLE" || break
+    done
+    sudo nft insert rule ip raw PREROUTING ip daddr "$SUBNET_CIDR" accept
+    ok "nft raw PREROUTING: accept $SUBNET_CIDR inserted before Docker drop rules"
+fi
+
+# ===========================================================================
 # Step 5 — enable IP forwarding
 # ===========================================================================
 info "Step 5/7 — Enabling IP forwarding"
@@ -93,6 +131,11 @@ ok "net.ipv4.ip_forward = 1"
 # Step 6 — iptables rules
 # ===========================================================================
 info "Step 6/7 — Adding iptables rules (iface: $LAN_IFACE, cidr: $SUBNET_CIDR)"
+# Remove any copies left from previous runs before re-inserting (idempotent).
+while sudo iptables -D DOCKER-USER -i "$LAN_IFACE" -o br-team+ -d "$SUBNET_CIDR" -j ACCEPT 2>/dev/null; do :; done
+while sudo iptables -D DOCKER-USER -i br-team+ -o "$LAN_IFACE" -d "$SUBNET_CIDR" -j ACCEPT 2>/dev/null; do :; done
+while sudo iptables -D DOCKER-USER -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT 2>/dev/null; do :; done
+while sudo iptables -t nat -D POSTROUTING -s "$SUBNET_CIDR" -d "$SUBNET_CIDR" ! -o br-team+ -j ACCEPT 2>/dev/null; do :; done
 sudo iptables -I DOCKER-USER -i "$LAN_IFACE" -o br-team+ -d "$SUBNET_CIDR" -j ACCEPT
 sudo iptables -I DOCKER-USER -i br-team+ -o "$LAN_IFACE" -d "$SUBNET_CIDR" -j ACCEPT
 sudo iptables -I DOCKER-USER -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
@@ -134,12 +177,6 @@ done
 echo ""
 echo "  Student route command (replace <HOST_IP> with this machine's LAN IP):"
 echo "    sudo ip route add ${SUBNET_BASE}.<N>.0/24 via <HOST_IP>"
-echo ""
-echo "  NOTE: If students cannot reach containers, check whether Docker added a"
-echo "  drop rule to the nft raw PREROUTING chain: "
-echo "    sudo nft -a list chain ip raw PREROUTING"
-echo "    sudo nft insert rule ip raw PREROUTING handle <N> ip saddr 10.7.7.0/24 ip daddr 10.7.0.0/16 accept"
-echo "    where <N> is before the drop rule "
 echo ""
 echo "  Tear down:       docker compose down"
 echo "  Reset one team:  docker compose restart team<NN>-sol team<NN>-tau team<NN>-eri"

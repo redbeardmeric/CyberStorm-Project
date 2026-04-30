@@ -19,17 +19,36 @@ MAX_WORKERS = 20
 
 
 def _read_generate_compose() -> tuple:
-    """Return (SUBNET_BASE, NUM_TEAMS) by parsing generate_compose.py."""
+    """Return (SUBNET_BASE, NUM_TEAMS, SKIP_SUBNETS) by parsing generate_compose.py."""
     try:
         txt = Path("generate_compose.py").read_text()
         base = re.search(r'^SUBNET_BASE\s*=\s*"(.+?)"', txt, re.MULTILINE)
         teams = re.search(r'^NUM_TEAMS\s*=\s*(\d+)', txt, re.MULTILINE)
-        return (base.group(1) if base else "10.7"), (int(teams.group(1)) if teams else 1)
+        skip_m = re.search(r'^SKIP_SUBNETS\s*=\s*\{([^}]*)\}', txt, re.MULTILINE)
+        skip = set()
+        if skip_m and skip_m.group(1).strip():
+            skip = {int(x.strip()) for x in skip_m.group(1).split(',') if x.strip().isdigit()}
+        return (
+            base.group(1) if base else "10.7",
+            int(teams.group(1)) if teams else 1,
+            skip,
+        )
     except Exception:
-        return "10.7", 1
+        return "10.7", 1, set()
 
 
-SUBNET_BASE, NUM_TEAMS = _read_generate_compose()
+SUBNET_BASE, NUM_TEAMS, SKIP_SUBNETS = _read_generate_compose()
+
+
+def _team_subnets() -> list:
+    """Return [(team_num, subnet_num), ...] respecting SKIP_SUBNETS."""
+    result, octet = [], 0
+    for team in range(1, NUM_TEAMS + 1):
+        octet += 1
+        while octet in SKIP_SUBNETS:
+            octet += 1
+        result.append((team, octet))
+    return result
 
 
 def _docker_exec(container: str, cmd: list) -> str:
@@ -44,29 +63,30 @@ def _docker_exec(container: str, cmd: list) -> str:
         return ""
 
 
-def _all_container_statuses() -> dict:
-    """Return {normalized_name: status_string} for every container.
+def _all_container_statuses() -> tuple:
+    """Return ({short_name: status}, {short_name: full_name}) for every container.
 
     Docker Compose prefixes the project name and appends an instance number,
-    e.g. 'cyberstormproject-team01-sol-1'. We extract just 'team01-sol' so
-    the rest of the code can reference containers by their service name.
+    e.g. 'cyberstorm-project-team01-sol-1'. We extract 'team01-sol' as the
+    short key for lookups, but keep the full name for docker exec calls.
     """
     try:
         r = subprocess.run(
             ["docker", "ps", "-a", "--format", "{{.Names}}\t{{.Status}}"],
             capture_output=True, text=True, timeout=10,
         )
-        out = {}
+        statuses, full_names = {}, {}
         for line in r.stdout.strip().splitlines():
             if "\t" in line:
                 full_name, status = line.split("\t", 1)
                 full_name = full_name.strip()
                 m = re.search(r"(team\d+-(?:sol|tau|eri))", full_name)
                 key = m.group(1) if m else full_name
-                out[key] = status.strip()
-        return out
+                statuses[key] = status.strip()
+                full_names[key] = full_name
+        return statuses, full_names
     except Exception:
-        return {}
+        return {}, {}
 
 
 def _parse_w_output(raw: str) -> list:
@@ -112,23 +132,35 @@ def _parse_proc_net_tcp(raw: str, port: int = 21) -> list:
 
 
 def _fetch_detail(name: str, ctype: str) -> dict:
-    """Fetch live session/connection data for one running container."""
+    """Fetch live session/connection data for one running container.
+
+    Docker containers have no utmp, so w/who are empty even with active SSH
+    sessions. Use /proc/net/tcp instead for all connection types.
+    """
     if ctype in ("sol", "eri"):
-        return {"sessions": _parse_w_output(_docker_exec(name, ["w", "--no-header"]))}
+        peers = _parse_proc_net_tcp(
+            _docker_exec(name, ["cat", "/proc/net/tcp"]), port=22
+        )
+        sessions = [{"user": "?", "from": p.split(":")[0], "idle": "-", "what": "-"}
+                    for p in peers]
+        return {"sessions": sessions, "peers": peers}
     if ctype == "tau":
-        peers = _parse_proc_net_tcp(_docker_exec(name, ["cat", "/proc/net/tcp"]))
+        peers = _parse_proc_net_tcp(
+            _docker_exec(name, ["cat", "/proc/net/tcp"]), port=21
+        )
         return {"connections": len(peers), "peers": peers}
     return {}
 
 
 def build_status() -> dict:
-    statuses = _all_container_statuses()
+    statuses, full_names = _all_container_statuses()
+    team_subnets = _team_subnets()
 
     to_query = [
-        (f"team{n:02d}-{s}", ct)
-        for n in range(1, NUM_TEAMS + 1)
+        (full_names.get(f"team{sn:02d}-{s}", f"team{sn:02d}-{s}"), ct)
+        for _, sn in team_subnets
         for s, ct in [("sol", "sol"), ("tau", "tau"), ("eri", "eri")]
-        if statuses.get(f"team{n:02d}-{s}", "").lower().startswith("up")
+        if statuses.get(f"team{sn:02d}-{s}", "").lower().startswith("up")
     ]
 
     detail: dict = {}
@@ -142,15 +174,16 @@ def build_status() -> dict:
 
     total_sessions = 0
     teams = []
-    for n in range(1, NUM_TEAMS + 1):
+    for team_num, subnet_num in team_subnets:
         containers = {}
         for suffix, ctype, ip_last in [("sol", "sol", 1), ("tau", "tau", 2), ("eri", "eri", 3)]:
-            cname = f"team{n:02d}-{suffix}"
-            raw_status = statuses.get(cname, "missing")
+            short = f"team{subnet_num:02d}-{suffix}"
+            cname = full_names.get(short, short)
+            raw_status = statuses.get(short, "missing")
             is_up = raw_status.lower().startswith("up")
             entry = {
-                "name": cname,
-                "ip": f"{SUBNET_BASE}.{n}.{ip_last}",
+                "name": short,
+                "ip": f"{SUBNET_BASE}.{subnet_num}.{ip_last}",
                 "status": "running" if is_up else "stopped",
                 "raw_status": raw_status,
             }
@@ -165,7 +198,7 @@ def build_status() -> dict:
                 entry["peers"] = d.get("peers", [])
                 total_sessions += count
             containers[ctype] = entry
-        teams.append({"team_num": n, "containers": containers})
+        teams.append({"team_num": subnet_num, "containers": containers})
 
     running = sum(
         1 for nm, st in statuses.items()
@@ -226,9 +259,11 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
             return
         n = int(m.group(1))
-        sol = f"team{n:02d}-sol"
-        tau = f"team{n:02d}-tau"
-        eri = f"team{n:02d}-eri"
+        mapping = {t: s for t, s in _team_subnets()}
+        sn = mapping.get(n, n)
+        sol = f"team{sn:02d}-sol"
+        tau = f"team{sn:02d}-tau"
+        eri = f"team{sn:02d}-eri"
         try:
             subprocess.run(
                 ["docker", "compose", "restart", sol, tau, eri],
