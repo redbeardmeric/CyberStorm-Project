@@ -167,7 +167,7 @@ function render(data) {
   document.getElementById('s-running').textContent  = s.containers_running + '/' + (s.total_teams * 3);
   document.getElementById('s-sessions').textContent = s.active_sessions;
   document.getElementById('last-updated').textContent =
-    'Updated ' + (data.generated_at || '').split('T')[1];
+    'Updated ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
 
   document.getElementById('tbody').innerHTML = data.teams.map(team => {
     const { sol, tau, eri } = team.containers;

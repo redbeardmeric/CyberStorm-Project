@@ -45,7 +45,12 @@ def _docker_exec(container: str, cmd: list) -> str:
 
 
 def _all_container_statuses() -> dict:
-    """Return {container_name: status_string} for every container."""
+    """Return {normalized_name: status_string} for every container.
+
+    Docker Compose prefixes the project name and appends an instance number,
+    e.g. 'cyberstormproject-team01-sol-1'. We extract just 'team01-sol' so
+    the rest of the code can reference containers by their service name.
+    """
     try:
         r = subprocess.run(
             ["docker", "ps", "-a", "--format", "{{.Names}}\t{{.Status}}"],
@@ -54,8 +59,11 @@ def _all_container_statuses() -> dict:
         out = {}
         for line in r.stdout.strip().splitlines():
             if "\t" in line:
-                name, status = line.split("\t", 1)
-                out[name.strip()] = status.strip()
+                full_name, status = line.split("\t", 1)
+                full_name = full_name.strip()
+                m = re.search(r"(team\d+-(?:sol|tau|eri))", full_name)
+                key = m.group(1) if m else full_name
+                out[key] = status.strip()
         return out
     except Exception:
         return {}

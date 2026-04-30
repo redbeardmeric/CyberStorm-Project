@@ -103,6 +103,11 @@ ok "iptables rules added"
 # Step 7 — start container monitor
 # ===========================================================================
 info "Step 7/7 — Starting container monitor"
+EXISTING_PID=$(pgrep -f "python3 monitor.py" | head -1 || true)
+if [[ -n "$EXISTING_PID" ]]; then
+    info "Monitor already running (PID $EXISTING_PID) — restarting"
+    kill "$EXISTING_PID" && sleep 1
+fi
 python3 monitor.py &
 MONITOR_PID=$!
 ok "Monitor running (PID $MONITOR_PID) -> http://localhost:8888"
