@@ -15,7 +15,7 @@ IMPORTANT: SUBNET_BASE must not overlap with the physical LAN.
   Change SUBNET_BASE if there is any overlap.
 """
 
-NUM_TEAMS = 1
+NUM_TEAMS = 2
 
 # Change this if the default subnet conflicts with your physical LAN.
 # Must be the first two octets of a private range not used on the LAN.

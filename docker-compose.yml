@@ -22,6 +22,29 @@ services:
       team01-net:
         ipv4_address: 10.7.1.3
 
+  team02-sol:
+    image: ctf-sol
+    hostname: sol
+    networks:
+      team02-net:
+        ipv4_address: 10.7.2.1
+
+  team02-tau:
+    image: ctf-tau
+    hostname: tau-ceti
+    networks:
+      team02-net:
+        ipv4_address: 10.7.2.2
+
+  team02-eri:
+    image: ctf-eri
+    hostname: eridani
+    environment:
+      TEAM_NUM: "02"
+    networks:
+      team02-net:
+        ipv4_address: 10.7.2.3
+
 networks:
   team01-net:
     driver: bridge
@@ -32,3 +55,12 @@ networks:
       config:
         - subnet: 10.7.1.0/24
           gateway: 10.7.1.254
+  team02-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-team02
+      com.docker.network.bridge.icc: "true"
+    ipam:
+      config:
+        - subnet: 10.7.2.0/24
+          gateway: 10.7.2.254
