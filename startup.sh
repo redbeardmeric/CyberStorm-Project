@@ -45,14 +45,14 @@ LAN_IFACE=$(ip route show default \
 # ===========================================================================
 # Step 1 — update generate_compose.py
 # ===========================================================================
-info "Step 1/6 — Setting NUM_TEAMS=$NUM_TEAMS in generate_compose.py"
+info "Step 1/7 — Setting NUM_TEAMS=$NUM_TEAMS in generate_compose.py"
 sed -i "s/^NUM_TEAMS = .*/NUM_TEAMS = $NUM_TEAMS/" generate_compose.py
 ok "generate_compose.py updated"
 
 # ===========================================================================
 # Step 2 — build Docker images
 # ===========================================================================
-info "Step 2/6 — Building Docker images (this takes 1–3 min)..."
+info "Step 2/7 — Building Docker images (this takes 1–3 min)..."
 docker build -t ctf-sol ./docker/sol
 docker build -t ctf-tau ./docker/tau
 docker build -t ctf-eri ./docker/eri
@@ -61,7 +61,7 @@ ok "Images built: ctf-sol  ctf-tau  ctf-eri"
 # ===========================================================================
 # Step 3 — generate docker-compose.yml
 # ===========================================================================
-info "Step 3/6 — Generating docker-compose.yml for $NUM_TEAMS team(s)"
+info "Step 3/7 — Generating docker-compose.yml for $NUM_TEAMS team(s)"
 python3 generate_compose.py
 ok "docker-compose.yml written"
 
@@ -69,7 +69,7 @@ ok "docker-compose.yml written"
 # Step 4 — start containers
 # ===========================================================================
 EXPECTED=$(( NUM_TEAMS * 3 ))
-info "Step 4/6 — Starting $EXPECTED containers..."
+info "Step 4/7 — Starting $EXPECTED containers..."
 docker compose up -d
 
 # give Docker a moment to settle, then verify
@@ -85,19 +85,27 @@ ok "$RUNNING / $EXPECTED containers running"
 # ===========================================================================
 # Step 5 — enable IP forwarding
 # ===========================================================================
-info "Step 5/6 — Enabling IP forwarding"
+info "Step 5/7 — Enabling IP forwarding"
 sudo sysctl -w net.ipv4.ip_forward=1 > /dev/null
 ok "net.ipv4.ip_forward = 1"
 
 # ===========================================================================
 # Step 6 — iptables rules
 # ===========================================================================
-info "Step 6/6 — Adding iptables rules (iface: $LAN_IFACE, cidr: $SUBNET_CIDR)"
+info "Step 6/7 — Adding iptables rules (iface: $LAN_IFACE, cidr: $SUBNET_CIDR)"
 sudo iptables -I DOCKER-USER -i "$LAN_IFACE" -o br-team+ -d "$SUBNET_CIDR" -j ACCEPT
 sudo iptables -I DOCKER-USER -i br-team+ -o "$LAN_IFACE" -d "$SUBNET_CIDR" -j ACCEPT
 sudo iptables -I DOCKER-USER -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 sudo iptables -t nat -I POSTROUTING -s "$SUBNET_CIDR" -d "$SUBNET_CIDR" ! -o br-team+ -j ACCEPT
 ok "iptables rules added"
+
+# ===========================================================================
+# Step 7 — start container monitor
+# ===========================================================================
+info "Step 7/7 — Starting container monitor"
+python3 monitor.py &
+MONITOR_PID=$!
+ok "Monitor running (PID $MONITOR_PID) -> http://localhost:8888"
 
 # ===========================================================================
 # Summary

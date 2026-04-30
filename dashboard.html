@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberStorm Monitor</title>
+<style>
+:root {
+  --bg:      #0f1117;
+  --surface: #1a1d27;
+  --border:  #2a2d3a;
+  --green:   #22c55e;
+  --yellow:  #eab308;
+  --red:     #ef4444;
+  --text:    #e2e8f0;
+  --muted:   #64748b;
+  --mono:    'Consolas', 'Menlo', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; }
+
+header {
+  padding: 12px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+}
+header h1 { font-size: 16px; letter-spacing: 1px; color: var(--green); }
+.stat { color: var(--muted); }
+.stat span { color: var(--text); font-weight: bold; }
+#last-updated { margin-left: auto; color: var(--muted); font-size: 11px; }
+
+table { width: 100%; border-collapse: collapse; }
+th {
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  text-align: left; color: var(--muted);
+  font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+}
+td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: top; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+.team-num { font-weight: bold; white-space: nowrap; }
+
+.cell-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot.active  { background: var(--green); }
+.dot.idle    { background: var(--yellow); }
+.dot.stopped { background: var(--red); }
+.cname { font-weight: bold; font-size: 12px; }
+.cip   { color: var(--muted); font-size: 11px; }
+
+.sessions { margin-top: 4px; }
+.session {
+  background: rgba(255,255,255,0.03);
+  border-left: 2px solid var(--green);
+  padding: 3px 6px; margin-bottom: 3px;
+  border-radius: 0 2px 2px 0;
+}
+.s-user { color: var(--green); font-weight: bold; }
+.s-from { color: var(--muted); }
+.s-what { color: var(--text); margin-top: 1px; }
+
+.ftp-count { font-weight: bold; }
+.ftp-peer  { color: var(--muted); font-size: 11px; }
+.idle-label, .stopped-label { font-size: 11px; }
+.idle-label    { color: var(--muted); }
+.stopped-label { color: var(--red); }
+
+.reset-btn {
+  background: transparent; border: 1px solid #374151;
+  color: var(--muted); padding: 4px 10px; border-radius: 4px;
+  cursor: pointer; font-family: var(--mono); font-size: 11px; white-space: nowrap;
+}
+.reset-btn:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+.reset-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+#error-bar {
+  background: #7f1d1d; color: #fca5a5;
+  padding: 8px 20px; font-size: 12px; display: none;
+}
+</style>
+</head>
+<body>
+
+<div id="error-bar"></div>
+
+<header>
+  <h1>CYBERSTORM MONITOR</h1>
+  <div class="stat">Teams: <span id="s-teams">-</span></div>
+  <div class="stat">Running: <span id="s-running">-</span></div>
+  <div class="stat">Sessions: <span id="s-sessions">-</span></div>
+  <div id="last-updated">-</div>
+</header>
+
+<table>
+  <thead>
+    <tr>
+      <th>Team</th>
+      <th>SOL &middot; ssh :22</th>
+      <th>TAU-CETI &middot; ftp :21</th>
+      <th>ERIDANI &middot; ssh :22</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="tbody"></tbody>
+</table>
+
+<script>
+const POLL_MS = 5000;
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function dotClass(c) {
+  if (c.status !== 'running') return 'stopped';
+  const n = c.sessions ? c.sessions.length : (c.connections || 0);
+  return n > 0 ? 'active' : 'idle';
+}
+
+function renderSSH(c) {
+  const meta = `<div class="cell-meta">
+    <span class="dot ${dotClass(c)}"></span>
+    <span class="cname">${esc(c.name)}</span>
+  </div>
+  <div class="cip">${esc(c.ip)}</div>`;
+
+  if (c.status !== 'running') {
+    return meta + '<div class="stopped-label">STOPPED</div>';
+  }
+  const list = (c.sessions || []).map(s => `
+    <div class="session">
+      <span class="s-user">${esc(s.user)}</span>
+      <span class="s-from"> &larr; ${esc(s.from)}</span>
+      <div class="s-what">${esc(s.what)}</div>
+    </div>`).join('');
+  return meta + '<div class="sessions">'
+    + (list || '<span class="idle-label">idle</span>')
+    + '</div>';
+}
+
+function renderFTP(c) {
+  const meta = `<div class="cell-meta">
+    <span class="dot ${dotClass(c)}"></span>
+    <span class="cname">${esc(c.name)}</span>
+  </div>
+  <div class="cip">${esc(c.ip)}</div>`;
+
+  if (c.status !== 'running') {
+    return meta + '<div class="stopped-label">STOPPED</div>';
+  }
+  if (!c.connections) {
+    return meta + '<span class="idle-label">idle</span>';
+  }
+  const peers = (c.peers || []).map(p =>
+    `<div class="ftp-peer">${esc(p)}</div>`).join('');
+  return meta + `<div class="ftp-count">${c.connections} conn</div>${peers}`;
+}
+
+function render(data) {
+  document.getElementById('error-bar').style.display = 'none';
+  const s = data.summary;
+  document.getElementById('s-teams').textContent    = s.total_teams;
+  document.getElementById('s-running').textContent  = s.containers_running + '/' + (s.total_teams * 3);
+  document.getElementById('s-sessions').textContent = s.active_sessions;
+  document.getElementById('last-updated').textContent =
+    'Updated ' + (data.generated_at || '').split('T')[1];
+
+  document.getElementById('tbody').innerHTML = data.teams.map(team => {
+    const { sol, tau, eri } = team.containers;
+    const num = String(team.team_num).padStart(2, '0');
+    return `<tr>
+      <td class="team-num">Team ${num}</td>
+      <td>${renderSSH(sol)}</td>
+      <td>${renderFTP(tau)}</td>
+      <td>${renderSSH(eri)}</td>
+      <td><button class="reset-btn" onclick="resetTeam(${team.team_num},this)">Reset</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-bar');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function poll() {
+  try {
+    const r = await fetch('/api/status');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    render(await r.json());
+  } catch (e) {
+    showError('Connection error: ' + e.message + ' — retrying...');
+  }
+}
+
+async function resetTeam(num, btn) {
+  const label = 'Team ' + String(num).padStart(2, '0');
+  if (!confirm('Reset ' + label + '?\n\nThis restarts all 3 containers and kicks all active sessions.')) return;
+  btn.disabled = true;
+  btn.textContent = 'Resetting…';
+  try {
+    const r = await fetch('/api/reset/' + num, { method: 'POST' });
+    const d = await r.json();
+    btn.textContent = d.ok ? 'Done' : 'Error';
+  } catch (_) {
+    btn.textContent = 'Error';
+  }
+  setTimeout(() => { btn.disabled = false; btn.textContent = 'Reset'; }, 3000);
+}
+
+poll();
+setInterval(poll, POLL_MS);
+</script>
+</body>
+</html>

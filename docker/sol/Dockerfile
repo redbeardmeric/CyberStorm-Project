@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y openssh-server && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y openssh-server procps && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash ryland && \
     echo 'ryland:hellokitty' | chpasswd
