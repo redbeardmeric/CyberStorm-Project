@@ -293,6 +293,13 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
 
+class _Server(HTTPServer):
+    def handle_error(self, request, client_address):
+        if isinstance(sys.exc_info()[1], ConnectionResetError):
+            return
+        super().handle_error(request, client_address)
+
+
 def main():
     parser = argparse.ArgumentParser(description="CyberStorm monitor")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
@@ -304,7 +311,7 @@ def main():
     _cache.set(build_status())
     threading.Thread(target=_refresh_loop, daemon=True).start()
 
-    server = HTTPServer(("", args.port), Handler)
+    server = _Server(("", args.port), Handler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

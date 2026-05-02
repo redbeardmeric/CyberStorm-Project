@@ -41,6 +41,8 @@ SUBNET_CIDR="${SUBNET_BASE}.0.0/16"
 LAN_IFACE=$(ip route show default \
     | awk 'NR==1 { for(i=1;i<=NF;i++) if($i=="dev") { print $(i+1); exit } }')
 [[ -z "$LAN_IFACE" ]] && die "Could not detect LAN interface from default route"
+HOST_IP=$(ip -4 addr show "$LAN_IFACE" | awk '/inet / {print $2}' | cut -d/ -f1 | head -1)
+[[ -z "$HOST_IP" ]] && die "Could not detect IP address for interface $LAN_IFACE"
 
 # ===========================================================================
 # Step 1 — update generate_compose.py
@@ -107,18 +109,16 @@ ok "$RUNNING / $EXPECTED containers running"
 # These fire before iptables and silently discard routed student traffic arriving
 # on the LAN interface. Insert a broad accept for the whole team subnet FIRST so
 # it wins before those drops.
-if sudo nft list chain ip raw PREROUTING 2>/dev/null | grep -q "drop"; then
-    # Remove any stale accept rules we may have added in a previous run
-    while sudo nft list chain ip raw PREROUTING 2>/dev/null \
-          | grep -q "ip daddr $SUBNET_CIDR accept"; do
-        HANDLE=$(sudo nft -a list chain ip raw PREROUTING 2>/dev/null \
-                  | grep -F "ip daddr $SUBNET_CIDR accept" \
-                  | grep -o 'handle [0-9]*' | awk '{print $2}' | head -1)
-        [[ -n "$HANDLE" ]] && sudo nft delete rule ip raw PREROUTING handle "$HANDLE" || break
-    done
-    sudo nft insert rule ip raw PREROUTING ip daddr "$SUBNET_CIDR" accept
-    ok "nft raw PREROUTING: accept $SUBNET_CIDR inserted before Docker drop rules"
-fi
+# Remove any stale accept rules we may have added in a previous run
+while sudo nft list chain ip raw PREROUTING 2>/dev/null \
+      | grep -q "iifname \"$LAN_IFACE\".*ip daddr $SUBNET_CIDR accept"; do
+    HANDLE=$(sudo nft -a list chain ip raw PREROUTING 2>/dev/null \
+              | grep -F "iifname \"$LAN_IFACE\"" | grep -F "ip daddr $SUBNET_CIDR accept" \
+              | grep -o 'handle [0-9]*' | awk '{print $2}' | head -1)
+    [[ -n "$HANDLE" ]] && sudo nft delete rule ip raw PREROUTING handle "$HANDLE" || break
+done
+sudo nft insert rule ip raw PREROUTING iifname "$LAN_IFACE" ip daddr "$SUBNET_CIDR" accept
+ok "nft raw PREROUTING: accept $LAN_IFACE -> $SUBNET_CIDR inserted before Docker drop rules"
 
 # ===========================================================================
 # Step 5 — enable IP forwarding
@@ -175,8 +175,8 @@ for n in $(seq 1 "$NUM_TEAMS"); do
         "${SUBNET_BASE}.${n}.3"
 done
 echo ""
-echo "  Student route command (replace <HOST_IP> with this machine's LAN IP):"
-echo "    sudo ip route add ${SUBNET_BASE}.<N>.0/24 via <HOST_IP>"
+echo "  Student route command:"
+echo "    sudo ip route add ${SUBNET_BASE}.<N>.0/24 via $HOST_IP"
 echo ""
 echo "  Tear down:       docker compose down"
 echo "  Reset one team:  docker compose restart team<NN>-sol team<NN>-tau team<NN>-eri"
