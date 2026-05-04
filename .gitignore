@@ -1,2 +1,6 @@
 rockyou.txt
 images.tar.gz
+__pycache__/
+CLAUDE.md
+.claude
+monitor.pid

@@ -24,23 +24,39 @@ def _read_generate_compose() -> tuple:
         txt = Path("generate_compose.py").read_text()
         base = re.search(r'^SUBNET_BASE\s*=\s*"(.+?)"', txt, re.MULTILINE)
         teams = re.search(r'^NUM_TEAMS\s*=\s*(\d+)', txt, re.MULTILINE)
-        t7 = re.search(r'^TEAM7_SUBNET\s*=\s*(\d+)', txt, re.MULTILINE)
+        skip = re.search(r'^SKIP_SUBNETS\s*=\s*\{(.+?)\}', txt, re.MULTILINE)
+        skip_set = (
+            {int(x.strip()) for x in skip.group(1).split(",")}
+            if skip else {7}
+        )
         return (
             base.group(1) if base else "10.7",
             int(teams.group(1)) if teams else 1,
-            int(t7.group(1)) if t7 else 16,
+            skip_set,
         )
     except Exception:
-        return "10.7", 1, 16
+        return "10.7", 1, {7}
 
 
-SUBNET_BASE, NUM_TEAMS, TEAM7_SUBNET = _read_generate_compose()
+SUBNET_BASE, NUM_TEAMS, SKIP_SUBNETS = _read_generate_compose()
 
 
 def _team_subnets() -> list:
-    """Return [(team_num, subnet_num), ...]. Team 7 uses TEAM7_SUBNET."""
-    return [(team, TEAM7_SUBNET if team == 7 else team)
-            for team in range(1, NUM_TEAMS + 1)]
+    """Return [(team_num, subnet_num), ...] matching generate_compose.py logic.
+
+    Natural teams appear first; remapped (skipped) teams appear at the end.
+    """
+    natural, skipped = [], []
+    remap = NUM_TEAMS + 1
+    for team in range(1, NUM_TEAMS + 1):
+        if team not in SKIP_SUBNETS:
+            natural.append((team, team))
+        else:
+            while remap in SKIP_SUBNETS:
+                remap += 1
+            skipped.append((team, remap))
+            remap += 1
+    return natural + skipped
 
 
 def _docker_exec(container: str, cmd: list) -> str:
@@ -233,7 +249,6 @@ def _autorestart(status: dict):
     ]
     if not stopped:
         return
-    print(f"[autorestart] {' '.join(stopped)}", file=sys.stderr)
     subprocess.run(
         ["docker", "compose", "start"] + stopped,
         capture_output=True, text=True, timeout=60,

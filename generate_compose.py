@@ -14,20 +14,21 @@ IMPORTANT: SUBNET_BASE must not overlap with the physical LAN.
   The default "10.7" assumes the classroom LAN uses a different range (e.g. 192.168.x.x).
   Change SUBNET_BASE if there is any overlap.
 
-NOTE: Team 7 is assigned TEAM7_SUBNET (default 16) instead of subnet 7, because
-10.7.7.0/24 conflicts with the physical router and makes containers unreachable.
-All other teams use their team number as the subnet octet directly.
+SKIP_SUBNETS lists subnet octets to avoid. startup.sh patches this automatically
+from the detected LAN octet so team subnets never collide with the physical network.
+Teams whose natural octet is in SKIP_SUBNETS are remapped to the first free octet
+above NUM_TEAMS.
 """
 
-# Team 7's subnet octet. All other teams use their team number as-is.
-TEAM7_SUBNET = 16
+# Subnet octets to skip — patched by startup.sh from the detected LAN interface.
+SKIP_SUBNETS = {7}
 
 NUM_TEAMS = 15
 
 # Change this if the default subnet conflicts with your physical LAN.
 # Must be the first two octets of a private range not used on the LAN.
 # Examples: "10.20", "10.100", "172.20"
-SUBNET_BASE = "10.7"
+SUBNET_BASE = "138.47"
 
 SERVICE_BLOCK = """\
   team{n:02d}-sol:
@@ -69,9 +70,22 @@ NETWORK_BLOCK = """\
 
 
 def subnet_numbers(num_teams):
-    """Yield subnet octets for each team. Team 7 uses TEAM7_SUBNET."""
+    """Yield subnet octets, natural teams first then remapped teams at the end.
+
+    Teams in SKIP_SUBNETS are remapped to the first free octet above num_teams
+    and yielded last so that team_num == subnet_octet for as many teams as possible.
+    """
+    remap = num_teams + 1
+    remapped = []
     for team in range(1, num_teams + 1):
-        yield TEAM7_SUBNET if team == 7 else team
+        if team not in SKIP_SUBNETS:
+            yield team
+        else:
+            while remap in SKIP_SUBNETS:
+                remap += 1
+            remapped.append(remap)
+            remap += 1
+    yield from remapped
 
 
 def main():
