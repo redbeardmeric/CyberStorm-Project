@@ -100,7 +100,6 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <th>SOL &middot; ssh :22</th>
       <th>TAU-CETI &middot; ftp :21</th>
       <th>ERIDANI &middot; ssh :22</th>
-      <th>Actions</th>
     </tr>
   </thead>
   <tbody id="tbody"></tbody>
@@ -121,10 +120,11 @@ function dotClass(c) {
   return n > 0 ? 'active' : 'idle';
 }
 
-function renderSSH(c) {
+function renderSSH(c, teamNum, svc) {
   const meta = `<div class="cell-meta">
     <span class="dot ${dotClass(c)}"></span>
     <span class="cname">${esc(c.name)}</span>
+    <button class="reset-btn" style="margin-left:auto;padding:2px 6px" onclick="resetContainer(${teamNum},'${svc}',this)">&#8635;</button>
   </div>
   <div class="cip">${esc(c.ip)}</div>`;
 
@@ -142,10 +142,11 @@ function renderSSH(c) {
     + '</div>';
 }
 
-function renderFTP(c) {
+function renderFTP(c, teamNum) {
   const meta = `<div class="cell-meta">
     <span class="dot ${dotClass(c)}"></span>
     <span class="cname">${esc(c.name)}</span>
+    <button class="reset-btn" style="margin-left:auto;padding:2px 6px" onclick="resetContainer(${teamNum},'tau',this)">&#8635;</button>
   </div>
   <div class="cip">${esc(c.ip)}</div>`;
 
@@ -174,10 +175,9 @@ function render(data) {
     const num = String(team.team_num).padStart(2, '0');
     return `<tr>
       <td class="team-num">Team ${num}</td>
-      <td>${renderSSH(sol)}</td>
-      <td>${renderFTP(tau)}</td>
-      <td>${renderSSH(eri)}</td>
-      <td><button class="reset-btn" onclick="resetTeam(${team.team_num},this)">Reset</button></td>
+      <td>${renderSSH(sol, team.team_num, 'sol')}</td>
+      <td>${renderFTP(tau, team.team_num)}</td>
+      <td>${renderSSH(eri, team.team_num, 'eri')}</td>
     </tr>`;
   }).join('');
 }
@@ -198,19 +198,19 @@ async function poll() {
   }
 }
 
-async function resetTeam(num, btn) {
-  const label = 'Team ' + String(num).padStart(2, '0');
-  if (!confirm('Reset ' + label + '?\n\nThis restarts all 3 containers and kicks all active sessions.')) return;
+async function resetContainer(teamNum, svc, btn) {
+  const label = `team${String(teamNum).padStart(2,'0')}-${svc}`;
+  if (!confirm(`Restart ${label}? This kicks any active session.`)) return;
   btn.disabled = true;
-  btn.textContent = 'Resetting…';
+  btn.textContent = '…';
   try {
-    const r = await fetch('/api/reset/' + num, { method: 'POST' });
+    const r = await fetch(`/api/reset/${teamNum}/${svc}`, { method: 'POST' });
     const d = await r.json();
-    btn.textContent = d.ok ? 'Done' : 'Error';
+    btn.textContent = d.ok ? '✓' : '✗';
   } catch (_) {
-    btn.textContent = 'Error';
+    btn.textContent = '✗';
   }
-  setTimeout(() => { btn.disabled = false; btn.textContent = 'Reset'; }, 3000);
+  setTimeout(() => { btn.disabled = false; btn.textContent = '↺'; }, 3000);
 }
 
 poll();

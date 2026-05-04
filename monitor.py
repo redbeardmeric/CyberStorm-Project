@@ -198,7 +198,7 @@ def build_status() -> dict:
                 entry["peers"] = d.get("peers", [])
                 total_sessions += count
             containers[ctype] = entry
-        teams.append({"team_num": subnet_num, "containers": containers})
+        teams.append({"team_num": team_num, "containers": containers})
 
     running = sum(
         1 for nm, st in statuses.items()
@@ -232,10 +232,28 @@ class _Cache:
 _cache = _Cache()
 
 
+def _autorestart(status: dict):
+    stopped = [
+        c["name"]
+        for team in status["teams"]
+        for c in team["containers"].values()
+        if c["status"] == "stopped"
+    ]
+    if not stopped:
+        return
+    print(f"[autorestart] {' '.join(stopped)}", file=sys.stderr)
+    subprocess.run(
+        ["docker", "compose", "start"] + stopped,
+        capture_output=True, text=True, timeout=60,
+    )
+
+
 def _refresh_loop():
     while True:
         try:
-            _cache.set(build_status())
+            data = build_status()
+            _cache.set(data)
+            _autorestart(data)
         except Exception as e:
             print(f"[refresh] {e}", file=sys.stderr)
         time.sleep(REFRESH_SECS)
@@ -254,22 +272,21 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
-        m = re.match(r"^/api/reset/(\d+)$", self.path)
+        m = re.match(r"^/api/reset/(\d+)(?:/(sol|tau|eri))?$", self.path)
         if not m:
             self.send_error(404)
             return
-        n = int(m.group(1))
+        n, svc = int(m.group(1)), m.group(2)
         mapping = {t: s for t, s in _team_subnets()}
         sn = mapping.get(n, n)
-        sol = f"team{sn:02d}-sol"
-        tau = f"team{sn:02d}-tau"
-        eri = f"team{sn:02d}-eri"
+        containers = ([f"team{sn:02d}-{svc}"] if svc
+                      else [f"team{sn:02d}-sol", f"team{sn:02d}-tau", f"team{sn:02d}-eri"])
         try:
             subprocess.run(
-                ["docker", "compose", "restart", sol, tau, eri],
+                ["docker", "compose", "restart"] + containers,
                 capture_output=True, text=True, timeout=60,
             )
-            self._send_json({"ok": True, "team": n})
+            self._send_json({"ok": True, "team": n, "containers": containers})
         except Exception as e:
             self._send_json({"ok": False, "error": str(e)})
 

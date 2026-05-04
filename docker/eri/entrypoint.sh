@@ -19,4 +19,6 @@ EOF
 chown rocky:rocky /home/rocky/.astrophage_data.txt
 chmod 640 /home/rocky/.astrophage_data.txt
 
+rm -- "$0"
+
 exec /usr/sbin/sshd -D
