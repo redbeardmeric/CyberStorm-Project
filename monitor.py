@@ -19,36 +19,28 @@ MAX_WORKERS = 20
 
 
 def _read_generate_compose() -> tuple:
-    """Return (SUBNET_BASE, NUM_TEAMS, SKIP_SUBNETS) by parsing generate_compose.py."""
+    """Return (SUBNET_BASE, NUM_TEAMS, TEAM7_SUBNET) by parsing generate_compose.py."""
     try:
         txt = Path("generate_compose.py").read_text()
         base = re.search(r'^SUBNET_BASE\s*=\s*"(.+?)"', txt, re.MULTILINE)
         teams = re.search(r'^NUM_TEAMS\s*=\s*(\d+)', txt, re.MULTILINE)
-        skip_m = re.search(r'^SKIP_SUBNETS\s*=\s*\{([^}]*)\}', txt, re.MULTILINE)
-        skip = set()
-        if skip_m and skip_m.group(1).strip():
-            skip = {int(x.strip()) for x in skip_m.group(1).split(',') if x.strip().isdigit()}
+        t7 = re.search(r'^TEAM7_SUBNET\s*=\s*(\d+)', txt, re.MULTILINE)
         return (
             base.group(1) if base else "10.7",
             int(teams.group(1)) if teams else 1,
-            skip,
+            int(t7.group(1)) if t7 else 16,
         )
     except Exception:
-        return "10.7", 1, set()
+        return "10.7", 1, 16
 
 
-SUBNET_BASE, NUM_TEAMS, SKIP_SUBNETS = _read_generate_compose()
+SUBNET_BASE, NUM_TEAMS, TEAM7_SUBNET = _read_generate_compose()
 
 
 def _team_subnets() -> list:
-    """Return [(team_num, subnet_num), ...] respecting SKIP_SUBNETS."""
-    result, octet = [], 0
-    for team in range(1, NUM_TEAMS + 1):
-        octet += 1
-        while octet in SKIP_SUBNETS:
-            octet += 1
-        result.append((team, octet))
-    return result
+    """Return [(team_num, subnet_num), ...]. Team 7 uses TEAM7_SUBNET."""
+    return [(team, TEAM7_SUBNET if team == 7 else team)
+            for team in range(1, NUM_TEAMS + 1)]
 
 
 def _docker_exec(container: str, cmd: list) -> str:

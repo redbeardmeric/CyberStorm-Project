@@ -14,11 +14,13 @@ IMPORTANT: SUBNET_BASE must not overlap with the physical LAN.
   The default "10.7" assumes the classroom LAN uses a different range (e.g. 192.168.x.x).
   Change SUBNET_BASE if there is any overlap.
 
-NOTE: Subnet octet 7 is skipped (teams >=7 use octet 8, 9, ...) to avoid a
-routing conflict that makes the 10.7.7.0/24 network unreachable.
+NOTE: Team 7 is assigned TEAM7_SUBNET (default 16) instead of subnet 7, because
+10.7.7.0/24 conflicts with the physical router and makes containers unreachable.
+All other teams use their team number as the subnet octet directly.
 """
 
-SKIP_SUBNETS = {7}
+# Team 7's subnet octet. All other teams use their team number as-is.
+TEAM7_SUBNET = 16
 
 NUM_TEAMS = 15
 
@@ -67,13 +69,9 @@ NETWORK_BLOCK = """\
 
 
 def subnet_numbers(num_teams):
-    """Yield subnet octets for each team, skipping any in SKIP_SUBNETS."""
-    octet = 0
-    for _ in range(num_teams):
-        octet += 1
-        while octet in SKIP_SUBNETS:
-            octet += 1
-        yield octet
+    """Yield subnet octets for each team. Team 7 uses TEAM7_SUBNET."""
+    for team in range(1, num_teams + 1):
+        yield TEAM7_SUBNET if team == 7 else team
 
 
 def main():

@@ -70,9 +70,9 @@ bash pi/reset_eridani.sh
 
 ### Subnet skipping — team numbering vs. subnet numbering
 
-**Team 7 is skipped** (`SKIP_SUBNETS = {7}`). Teams are numbered 1–15, but subnet octets skip 7, so teams 1–6 use subnets 1–6 and teams 7–15 use subnets 8–16. This exists because `10.7.7.0/24` conflicts with the physical router subnet and makes containers unreachable.
+**Team 7 uses subnet 16** (`TEAM7_SUBNET = 16`). All other teams use their team number directly as the subnet octet (team 1 → `10.7.1.0/24`, team 8 → `10.7.8.0/24`, etc.). Subnet 7 is avoided because `10.7.7.0/24` conflicts with the physical router and makes containers unreachable.
 
-`generate_compose.py::subnet_numbers()` and `monitor.py::_team_subnets()` both implement this same skip logic — they must stay in sync.
+`generate_compose.py::subnet_numbers()` and `monitor.py::_team_subnets()` both implement this same mapping — they must stay in sync.
 
 ### Per-team flag generation
 
